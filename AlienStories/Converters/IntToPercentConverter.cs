@@ -1,0 +1,22 @@
+﻿using System;
+using System.Globalization;
+using Avalonia.Data.Converters;
+
+namespace AlienStories.Converters;
+
+public class IntToPercentConverter : IValueConverter
+{
+    public static readonly IntToPercentConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int hunger)
+            return hunger.ToString() + "%"; // Для ширины прогресс-бара
+        return "0%";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
