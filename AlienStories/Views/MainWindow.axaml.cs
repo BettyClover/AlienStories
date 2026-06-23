@@ -41,6 +41,8 @@ public partial class MainWindow : Window
         SpawnInitialAliens();
 
         InitStarGame();
+
+        InitMemoryGame();
     }
 
     private async void OnCreatureHugged(CapturedCreature creature)
@@ -412,7 +414,6 @@ public partial class MainWindow : Window
         GameStartButton.Content = "⏹️ Стоп";
         UpdateGameUI();
 
-        // Таймер для обратного отсчёта
         _gameTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(1)
@@ -420,7 +421,6 @@ public partial class MainWindow : Window
         _gameTimer.Tick += (s, e) => OnGameTimerTick();
         _gameTimer.Start();
 
-        // Таймер для создания звёзд
         _gameSpawnTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(800)
@@ -428,14 +428,13 @@ public partial class MainWindow : Window
         _gameSpawnTimer.Tick += (s, e) => SpawnGameStar();
         _gameSpawnTimer.Start();
 
-        // 👇 НОВЫЙ ТАЙМЕР ДЛЯ ОБНОВЛЕНИЯ ПОЗИЦИЙ ЗВЁЗД
         var updateTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(16) // ~60 FPS
+            Interval = TimeSpan.FromMilliseconds(16)
         };
         updateTimer.Tick += (s, e) => UpdateGameStars();
         updateTimer.Start();
-        _gameUpdateTimer = updateTimer; // нужно добавить поле
+        _gameUpdateTimer = updateTimer;
     }
 
     private void StopGame()
@@ -443,7 +442,7 @@ public partial class MainWindow : Window
         _isGamePlaying = false;
         _gameTimer?.Stop();
         _gameSpawnTimer?.Stop();
-        _gameUpdateTimer?.Stop(); // 👈 ДОБАВЬ ЭТО
+        _gameUpdateTimer?.Stop();
 
         GameStartButton.Content = "▶️ Начать";
 
@@ -485,10 +484,9 @@ public partial class MainWindow : Window
                 (byte)_random.Next(50, 100)
             )),
             Opacity = 1,
-            Tag = _gameStars.Count // Уникальный тег для идентификации
+            Tag = _gameStars.Count
         };
 
-        // Сохраняем координаты в объекте FallingStar
         var fallingStar = new FallingStar
         {
             Control = star,
@@ -500,7 +498,6 @@ public partial class MainWindow : Window
 
         _gameStars.Add(fallingStar);
 
-        // Устанавливаем позицию на Canvas
         Canvas.SetLeft(star, fallingStar.X);
         Canvas.SetTop(star, fallingStar.Y);
         StarGameCanvas.Children.Add(star);
@@ -512,14 +509,11 @@ public partial class MainWindow : Window
 
         foreach (var star in _gameStars.ToList())
         {
-            // Обновляем координаты в объекте
             star.Y += star.Speed;
 
-            // Обновляем позицию на Canvas
             Canvas.SetTop(star.Control, star.Y);
             Canvas.SetLeft(star.Control, star.X);
 
-            // Если звезда упала за пределы экрана — удаляем
             if (star.Y > StarGameCanvas.Height + 50)
             {
                 StarGameCanvas.Children.Remove(star.Control);
@@ -545,17 +539,16 @@ public partial class MainWindow : Window
 
             if (distance < star.Size / 2)
             {
-                // Удаляем звезду
+
                 StarGameCanvas.Children.Remove(star.Control);
                 _gameStars.RemoveAt(i);
                 _gameScore++;
 
-                // 👇 ДОБАВЛЯЕМ ЗВЁЗДНУЮ ПЫЛЬ ЗА КАЖДУЮ ПОЙМАННУЮ ЗВЕЗДУ
                 _viewModel.AddStarDust(1);
 
                 UpdateGameUI();
 
-                // Эффект вспышки
+
                 var flash = new Avalonia.Controls.Shapes.Ellipse
                 {
                     Width = 30,
@@ -585,6 +578,235 @@ public partial class MainWindow : Window
 
         if (scoreText != null) scoreText.Text = _gameScore.ToString();
         if (timerText != null) timerText.Text = _gameTimeLeft.ToString();
+    }
+
+    // ============ ИГРА "МЕМОРИ" ============
+
+    private List<MemoryCard> _memoryCards = new();
+    private MemoryCard? _firstSelected;
+    private MemoryCard? _secondSelected;
+    private bool _isMemoryLocked = false;
+    private int _memoryPairsFound = 0;
+    private int _memoryMoves = 0;
+    private int _totalMemoryPairs = 16;
+    private readonly string[] _memoryEmojis = {
+    "🐱", "✨", "🌿", "🐈", "🌙", "🌈",
+    "⭐", "🌸", "🍀", "🌺", "🦋", "🌊",
+    "🍄", "🌻", "🐝", "🪐"
+};
+
+    private void InitMemoryGame()
+    {
+        MemoryStartButton.Click += OnMemoryStartClick;
+        StartNewMemoryGame();
+    }
+
+    private void OnMemoryStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        StartNewMemoryGame();
+    }
+
+    private void StartNewMemoryGame()
+    {
+        MemoryCardGrid.Children.Clear();
+        _memoryCards.Clear();
+        _firstSelected = null;
+        _secondSelected = null;
+        _isMemoryLocked = false;
+        _memoryPairsFound = 0;
+        _memoryMoves = 0;
+        UpdateMemoryUI();
+
+        // Создаём пары карточек (16 пар = 32 карточки)
+        var cardList = new List<string>();
+        for (int i = 0; i < _totalMemoryPairs; i++)
+        {
+            cardList.Add(_memoryEmojis[i % _memoryEmojis.Length]);
+            cardList.Add(_memoryEmojis[i % _memoryEmojis.Length]);
+        }
+
+        // Перемешиваем
+        for (int i = cardList.Count - 1; i > 0; i--)
+        {
+            var j = _random.Next(i + 1);
+            (cardList[i], cardList[j]) = (cardList[j], cardList[i]);
+        }
+
+        // Заполняем сетку 4 строки x 8 колонок = 32 карточки
+        int index = 0;
+        for (int row = 0; row < 4; row++)
+        {
+            for (int col = 0; col < 8; col++)
+            {
+                var card = new MemoryCard
+                {
+                    Emoji = cardList[index],
+                    IsFlipped = false,
+                    IsMatched = false
+                };
+
+                var button = new Button
+                {
+                    Content = "❓",
+                    FontSize = 34,
+                    Background = new SolidColorBrush(Color.Parse("#2a2a3e")),
+                    Foreground = Brushes.White,
+                    Width = 100,
+                    Height = 100,
+                    Margin = new Thickness(5),
+                    DataContext = card
+                };
+                button.Click += OnMemoryCardClick;
+
+                Grid.SetRow(button, row);
+                Grid.SetColumn(button, col);
+                MemoryCardGrid.Children.Add(button);
+
+                card.Button = button;
+                _memoryCards.Add(card);
+                index++;
+            }
+        }
+    }
+
+
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+    }
+
+    private async void OnMemoryCardClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_isMemoryLocked) return;
+
+        var button = sender as Button;
+        if (button == null) return;
+
+        var card = button.DataContext as MemoryCard;
+        if (card == null || card.IsFlipped || card.IsMatched) return;
+
+        card.IsFlipped = true;
+        button.Content = card.Emoji;
+        button.Background = new SolidColorBrush(Color.Parse("#4a6fa5"));
+
+        if (_firstSelected == null)
+        {
+            _firstSelected = card;
+        }
+        else if (_secondSelected == null && _firstSelected != card)
+        {
+            _secondSelected = card;
+            _memoryMoves++;
+            UpdateMemoryUI();
+
+            if (_firstSelected.Emoji == _secondSelected.Emoji)
+            {
+                _firstSelected.IsMatched = true;
+                _secondSelected.IsMatched = true;
+                _memoryPairsFound++;
+                UpdateMemoryUI();
+
+                _firstSelected.Button.Background = new SolidColorBrush(Color.Parse("#27ae60"));
+                _secondSelected.Button.Background = new SolidColorBrush(Color.Parse("#27ae60"));
+
+                _firstSelected = null;
+                _secondSelected = null;
+
+                if (_memoryPairsFound == _totalMemoryPairs)
+                {
+                    ShowMemoryWinDialog();
+                }
+            }
+            else
+            {
+                _isMemoryLocked = true;
+                await Task.Delay(500);
+
+                _firstSelected.IsFlipped = false;
+                _secondSelected.IsFlipped = false;
+                _firstSelected.Button.Content = "❓";
+                _firstSelected.Button.Background = new SolidColorBrush(Color.Parse("#2a2a3e"));
+                _secondSelected.Button.Content = "❓";
+                _secondSelected.Button.Background = new SolidColorBrush(Color.Parse("#2a2a3e"));
+
+                _firstSelected = null;
+                _secondSelected = null;
+                _isMemoryLocked = false;
+            }
+        }
+    }
+
+    private void ShowMemoryWinDialog() // 👈 УБРАЛИ async
+    {
+        var score = _totalMemoryPairs * 2 - _memoryMoves;
+        if (score < 0) score = 1;
+
+        var dialog = new Window
+        {
+            Title = "🎉 Ты победил!",
+            Width = 350,
+            Height = 200,
+            Background = new SolidColorBrush(Color.Parse("#1a1a2e"))
+        };
+
+        var stackPanel = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 15
+        };
+
+        stackPanel.Children.Add(new TextBlock
+        {
+            Text = $"🎉 Ты нашёл все {_totalMemoryPairs} пар за {_memoryMoves} ходов!",
+            FontSize = 18,
+            Foreground = Brushes.White,
+            TextAlignment = Avalonia.Media.TextAlignment.Center
+        });
+
+        stackPanel.Children.Add(new TextBlock
+        {
+            Text = $"⭐ +{score} звёздной пыли!",
+            FontSize = 16,
+            Foreground = Brushes.Gold,
+            TextAlignment = Avalonia.Media.TextAlignment.Center
+        });
+
+        var okButton = new Button
+        {
+            Content = "✨ Отлично!",
+            Background = new SolidColorBrush(Color.Parse("#4a6fa5")),
+            Foreground = Brushes.White,
+            Padding = new Thickness(15, 8, 15, 8),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+        };
+        okButton.Click += (s, e) => dialog.Close();
+        stackPanel.Children.Add(okButton);
+
+        dialog.Content = stackPanel;
+        dialog.Show();
+
+        _viewModel.AddStarDust(score);
+        _viewModel.GameStatusText = $"🧠 Ты нашёл все пары! +{score} ✨";
+    }
+
+    private void UpdateMemoryUI()
+    {
+        var pairsText = this.FindControl<TextBlock>("MemoryPairsText");
+        var movesText = this.FindControl<TextBlock>("MemoryMovesText");
+
+        if (pairsText != null)
+            pairsText.Text = $"{_memoryPairsFound}/{_totalMemoryPairs}";
+        if (movesText != null)
+            movesText.Text = _memoryMoves.ToString();
+    }
+
+    private class MemoryCard
+    {
+        public string Emoji { get; set; } = "";
+        public bool IsFlipped { get; set; }
+        public bool IsMatched { get; set; }
+        public Button? Button { get; set; }
     }
 
     private class FallingStar

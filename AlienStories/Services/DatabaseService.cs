@@ -409,10 +409,11 @@ public class DatabaseService
         connection.Open();
 
         using var cmd = new SqliteCommand(@"
-            SELECT Value FROM GameData WHERE Key = 'StarDust'
-        ", connection);
+        SELECT Value FROM GameData WHERE Key = 'StarDust'
+    ", connection);
 
         var result = cmd.ExecuteScalar();
-        return result != null ? int.Parse(result.ToString()) : 0;
+
+        return result != null && result != DBNull.Value ? int.Parse(result.ToString()!) : 0;
     }
 }

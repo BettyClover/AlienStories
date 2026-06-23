@@ -21,12 +21,25 @@
 				<TextBlock Text="🌟 Звёздный приют" FontSize="24" FontWeight="Bold" Foreground="Gold" />
 
 				<StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Spacing="20">
-					<Button Content="🏠 Главная" Command="{Binding SwitchToGameCommand}" Background="#4a6fa5" Foreground="White" />
-					<Button Content="📚 Коллекция" Command="{Binding SwitchToCollectionCommand}" Background="#2a2a3e" Foreground="White" />
-					<Button Content="📖 Альбом" Command="{Binding SwitchToAlbumCommand}" Background="#2a2a3e" Foreground="White" />
+					<Button Content="🏠 Главная" 
+							Command="{Binding SwitchToGameCommand}" 
+							Background="#4a6fa5" 
+							Foreground="White" />
+					<Button Content="📚 Коллекция" 
+							Command="{Binding SwitchToCollectionCommand}" 
+							Background="#2a2a3e" 
+							Foreground="White" />
+					<Button Content="📖 Альбом" 
+							Command="{Binding SwitchToAlbumCommand}" 
+							Background="#2a2a3e" 
+							Foreground="White" />
 					<Button Content="🌟 Звёздная охота"
 						Command="{Binding SwitchToStarCatchCommand}"
 						Background="#4a6fa5"
+						Foreground="White" />
+					<Button Content="🧠 Память"
+						Command="{Binding SwitchToMemoryCommand}"
+						Background="#2a2a3e"
 						Foreground="White" />
 
 					<TextBlock Text="|" Foreground="#444" />
@@ -153,6 +166,57 @@
 					<Border DockPanel.Dock="Bottom" Background="#1a1a2e" Padding="10">
 						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15">
 							<Button x:Name="GameStartButton" Content="▶️ Начать" Background="#4a6fa5" Foreground="White" Padding="15,8" />
+							<Button Content="🏠 Выйти" Command="{Binding SwitchToGameCommand}" Background="#e74c3c" Foreground="White" Padding="15,8" />
+						</StackPanel>
+					</Border>
+				</DockPanel>
+			</Border>
+
+			<!-- Экран игры "Мемори" -->
+			<Border x:Name="MemoryPanel" Background="#0a0a1a" CornerRadius="15"
+					IsVisible="{Binding IsMemoryActive}">
+				<DockPanel>
+					<!-- Верхняя панель -->
+					<Border DockPanel.Dock="Top" Background="#1a1a2e" Padding="15" CornerRadius="0 0 15 15">
+						<DockPanel>
+							<TextBlock Text="🧠 Найди пару!" FontSize="20" FontWeight="Bold" Foreground="Gold" />
+							<StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Spacing="15">
+								<TextBlock Text="Пары: " Foreground="White" />
+								<TextBlock x:Name="MemoryPairsText" Text="0/16" FontSize="18" Foreground="White" />
+								<TextBlock Text="|" Foreground="#444" />
+								<TextBlock Text="Ходы: " Foreground="White" />
+								<TextBlock x:Name="MemoryMovesText" Text="0" FontSize="18" Foreground="White" />
+							</StackPanel>
+						</DockPanel>
+					</Border>
+
+					<!-- Игровое поле -->
+					<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+						<Grid x:Name="MemoryCardGrid" Margin="20"
+							  Width="950" Height="550">
+							<Grid.RowDefinitions>
+								<RowDefinition />
+								<RowDefinition />
+								<RowDefinition />
+								<RowDefinition />
+							</Grid.RowDefinitions>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+								<ColumnDefinition />
+							</Grid.ColumnDefinitions>
+						</Grid>
+					</ScrollViewer>
+
+					<!-- Нижняя панель -->
+					<Border DockPanel.Dock="Bottom" Background="#1a1a2e" Padding="10">
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15">
+							<Button x:Name="MemoryStartButton" Content="🔄 Новая игра" Background="#4a6fa5" Foreground="White" Padding="15,8" />
 							<Button Content="🏠 Выйти" Command="{Binding SwitchToGameCommand}" Background="#e74c3c" Foreground="White" Padding="15,8" />
 						</StackPanel>
 					</Border>

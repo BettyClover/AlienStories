@@ -12,8 +12,7 @@
     
     <Border Background="#1a1a2e" CornerRadius="20" Margin="15">
         <StackPanel Margin="25" Spacing="12">
-            <!-- Заголовок -->
-            <TextBlock Text="🌠*࿏⭒ Звёздный приют..." 
+            <TextBlock Text="🌟 Звёздный приют" 
                        FontSize="26" 
                        FontWeight="Bold" 
                        Foreground="Gold" 
@@ -21,30 +20,29 @@
             
             <Border Background="#0a0a1a" CornerRadius="10" Padding="15">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="✨ Нажимай на котиков-инопланетян, чтобы пригласить их в твой приют" 
+                    <TextBlock Text="🔹 Нажимай на грустных котиков, чтобы пригласить их в приют" 
                                FontSize="13" 
                                Foreground="#ccc" 
                                TextWrapping="Wrap" />
-                    <TextBlock Text="✨ Корми и обнимай своих друзей, чтобы они были счастливы" 
+                    <TextBlock Text="🔹 Корми и обнимай своих друзей, чтобы они были счастливы" 
                                FontSize="13" 
                                Foreground="#ccc" 
                                TextWrapping="Wrap" />
-                    <TextBlock Text="✨ Собирай всех существ в альбоме. Вы можете найти самых редких из них" 
+                    <TextBlock Text="🔹 Собирай всех существ в альбоме" 
                                FontSize="13" 
                                Foreground="#ccc" 
                                TextWrapping="Wrap" />
-                    <TextBlock Text="✨ Играй в мини-игры и зарабатывай звёздную пыль" 
+                    <TextBlock Text="🔹 Играй в мини-игры и зарабатывай звёздную пыль ✨" 
                                FontSize="13" 
                                Foreground="#ccc" 
                                TextWrapping="Wrap" />
-                    <TextBlock Text="✨ Трать звёздную пыль на супер-кормёжку своих подопечных!" 
+                    <TextBlock Text="🔹 Трать звёздную пыль на супер-кормёжку всех друзей!" 
                                FontSize="13" 
                                Foreground="#ccc" 
                                TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             
-            <!-- Кнопка начала -->
             <Button x:Name="StartButton" 
                     Content="🚀 Начать игру!" 
                     Background="#4a6fa5" 

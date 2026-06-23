@@ -78,6 +78,9 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _isStarCatchActive;
 
     [ObservableProperty]
+    private bool _isMemoryActive; // 👈 ДОБАВЛЕНО
+
+    [ObservableProperty]
     private int _starDust;
 
     [ObservableProperty]
@@ -87,6 +90,7 @@ public partial class MainWindowViewModel : ObservableObject
     public ICommand SwitchToCollectionCommand { get; }
     public ICommand SwitchToAlbumCommand { get; }
     public ICommand SwitchToStarCatchCommand { get; }
+    public ICommand SwitchToMemoryCommand { get; } // 👈 ДОБАВЛЕНО
     public ICommand HugCommand { get; }
     public ICommand FeedCommand { get; }
     public ICommand StoryCommand { get; }
@@ -111,6 +115,7 @@ public partial class MainWindowViewModel : ObservableObject
         SwitchToCollectionCommand = new RelayCommand(SwitchToCollection);
         SwitchToAlbumCommand = new RelayCommand(SwitchToAlbum);
         SwitchToStarCatchCommand = new RelayCommand(SwitchToStarCatch);
+        SwitchToMemoryCommand = new RelayCommand(SwitchToMemory); // 👈 ДОБАВЛЕНО
         HugCommand = new RelayCommand<CapturedCreature>(HugCreature);
         FeedCommand = new RelayCommand<CapturedCreature>(FeedCreature);
         StoryCommand = new RelayCommand<CapturedCreature>(TellStory);
@@ -162,7 +167,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void GiveGift()
     {
         var all = _db.GetAllCaptured();
-        if (all.Count == 0) return;
+        if (all == null || all.Count == 0) return;
 
         var creature = all[_random.Next(all.Count)];
         var giftType = _random.Next(3);
@@ -222,40 +227,49 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void SwitchToGame()
     {
-        System.Diagnostics.Debug.WriteLine("🔥 SwitchToGame вызван!");
         IsGameActive = true;
         IsCollectionActive = false;
         IsAlbumActive = false;
         IsStarCatchActive = false;
+        IsMemoryActive = false;
     }
 
     private void SwitchToCollection()
     {
-        System.Diagnostics.Debug.WriteLine("🔥 SwitchToCollection вызван!");
         IsGameActive = false;
         IsCollectionActive = true;
         IsAlbumActive = false;
         IsStarCatchActive = false;
+        IsMemoryActive = false;
         LoadCollection();
     }
 
     private void SwitchToAlbum()
     {
-        System.Diagnostics.Debug.WriteLine("🔥 SwitchToAlbum вызван!");
         IsGameActive = false;
         IsCollectionActive = false;
         IsAlbumActive = true;
         IsStarCatchActive = false;
+        IsMemoryActive = false;
         LoadAlbum();
     }
 
     private void SwitchToStarCatch()
     {
-        System.Diagnostics.Debug.WriteLine("🔥 SwitchToStarCatch вызван!");
         IsGameActive = false;
         IsCollectionActive = false;
         IsAlbumActive = false;
         IsStarCatchActive = true;
+        IsMemoryActive = false;
+    }
+
+    private void SwitchToMemory()
+    {
+        IsGameActive = false;
+        IsCollectionActive = false;
+        IsAlbumActive = false;
+        IsStarCatchActive = false;
+        IsMemoryActive = true;
     }
 
     public void AddStarDust(int amount)
@@ -442,7 +456,7 @@ public partial class MainWindowViewModel : ObservableObject
             _db.DeleteCaptured(creature.Id);
             LoadCollection();
             LoadAlbum();
-            GameStatusText = $"🕊️ Ты отпустил {creature.Nickname} на свободу. Он будет помнить тебя! ✨";
+            GameStatusText = $"Ты отпустил {creature.Nickname} на свободу. Он будет помнить тебя!";
             CollectionUpdated?.Invoke();
             confirm.Close();
         };
