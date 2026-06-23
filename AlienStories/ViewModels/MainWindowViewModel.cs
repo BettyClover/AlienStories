@@ -12,16 +12,52 @@ using System.Windows.Input;
 
 namespace AlienStories.ViewModels;
 
+public class AlbumItem
+{
+    public CreatureCatalog Catalog { get; set; } = new();
+    public bool IsCaptured { get; set; }
+    public CapturedCreature? CapturedCreature { get; set; }
+
+    public string DisplayColor => IsCaptured ? Catalog.ColorHex : "#1a1a2e";
+    public string DisplayName => IsCaptured ? Catalog.Name : "???";
+    public string DisplayStatus => IsCaptured ? "✅ Пойман" : "❌ Не пойман";
+    public string DisplayForeground => IsCaptured ? "White" : "#555";
+    public string RarityName => Catalog.Rarity switch
+    {
+        1 => "Обычный",
+        2 => "Необычный",
+        3 => "Редкий",
+        4 => "Легендарный",
+        _ => "Неизвестно"
+    };
+    public string RarityColor => Catalog.Rarity switch
+    {
+        1 => "#4CAF50",
+        2 => "#2196F3",
+        3 => "#9C27B0",
+        4 => "#FFD700",
+        _ => "#888"
+    };
+}
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly DatabaseService _db;
     private System.Timers.Timer? _hungerTimer;
+    private System.Timers.Timer? _giftTimer;
+    private readonly Random _random = new();
 
     [ObservableProperty]
     private ObservableCollection<CapturedCreature> _capturedCreatures = new();
 
     [ObservableProperty]
+    private ObservableCollection<AlbumItem> _albumItems = new();
+
+    [ObservableProperty]
     private string _gameStatusText = "Нажми на одинокого друга, чтобы пригласить его! ✨";
+
+    [ObservableProperty]
+    private string _albumStatusText = "📖 Собери всех инопланетян!";
 
     [ObservableProperty]
     private int _friendsCount;
@@ -35,35 +71,60 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCollectionActive;
 
+    [ObservableProperty]
+    private bool _isAlbumActive;
+
+    [ObservableProperty]
+    private bool _isStarCatchActive;
+
+    [ObservableProperty]
+    private int _starDust;
+
+    [ObservableProperty]
+    private string _starDustText = "✨ 0";
+
     public ICommand SwitchToGameCommand { get; }
     public ICommand SwitchToCollectionCommand { get; }
+    public ICommand SwitchToAlbumCommand { get; }
+    public ICommand SwitchToStarCatchCommand { get; }
     public ICommand HugCommand { get; }
     public ICommand FeedCommand { get; }
     public ICommand StoryCommand { get; }
     public ICommand ReleaseCommand { get; }
+    public ICommand SuperFeedCommand { get; }
 
     public event Action<CapturedCreature>? CreatureJumped;
+    public event Action<CapturedCreature>? CreatureHugged;
     public event Action? CollectionUpdated;
 
     public MainWindowViewModel()
     {
         _db = new DatabaseService();
+
+        StarDust = _db.GetStarDust();
+        StarDustText = $"✨ {StarDust}";
+
         LoadCollection();
+        LoadAlbum();
 
         SwitchToGameCommand = new RelayCommand(SwitchToGame);
         SwitchToCollectionCommand = new RelayCommand(SwitchToCollection);
+        SwitchToAlbumCommand = new RelayCommand(SwitchToAlbum);
+        SwitchToStarCatchCommand = new RelayCommand(SwitchToStarCatch);
         HugCommand = new RelayCommand<CapturedCreature>(HugCreature);
         FeedCommand = new RelayCommand<CapturedCreature>(FeedCreature);
         StoryCommand = new RelayCommand<CapturedCreature>(TellStory);
         ReleaseCommand = new RelayCommand<CapturedCreature>(ReleaseCreature);
+        SuperFeedCommand = new RelayCommand(SuperFeed);
 
         StartHungerTimer();
+        StartGiftTimer();
     }
 
     private void StartHungerTimer()
     {
         _hungerTimer = new System.Timers.Timer();
-        _hungerTimer.Interval = 60000;
+        _hungerTimer.Interval = 10000;
         _hungerTimer.Elapsed += (s, e) => DecreaseHunger();
         _hungerTimer.Start();
     }
@@ -74,7 +135,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         foreach (var creature in all)
         {
-            creature.Hunger = Math.Max(0, creature.Hunger - 5);
+            creature.Hunger = Math.Max(0, creature.Hunger - 1);
             _db.UpdateCreature(creature);
         }
 
@@ -90,6 +151,44 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
+    private void StartGiftTimer()
+    {
+        _giftTimer = new System.Timers.Timer();
+        _giftTimer.Interval = 30000 + _random.Next(30000);
+        _giftTimer.Elapsed += (s, e) => GiveGift();
+        _giftTimer.Start();
+    }
+
+    private void GiveGift()
+    {
+        var all = _db.GetAllCaptured();
+        if (all.Count == 0) return;
+
+        var creature = all[_random.Next(all.Count)];
+        var giftType = _random.Next(3);
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            switch (giftType)
+            {
+                case 0:
+                    AddStarDust(5);
+                    GameStatusText = $"🎁 {creature.Nickname} подарил тебе 5 ✨!";
+                    break;
+                case 1:
+                    AddStarDust(10);
+                    GameStatusText = $"🎁 {creature.Nickname} подарил тебе 10 ✨!";
+                    break;
+                case 2:
+                    GameStatusText = $"💕 {creature.Nickname} говорит: 'Ты мой самый лучший друг!'";
+                    break;
+            }
+        });
+
+        _giftTimer.Interval = 30000 + _random.Next(30000);
+        _giftTimer.Start();
+    }
+
     private void LoadCollection()
     {
         var all = _db.GetAllCaptured();
@@ -98,17 +197,105 @@ public partial class MainWindowViewModel : ObservableObject
         FriendsLimitText = $"👥 {FriendsCount} / 10";
     }
 
+    private void LoadAlbum()
+    {
+        var allCatalog = _db.GetAllCatalog();
+        var captured = _db.GetAllCaptured();
+
+        AlbumItems = new ObservableCollection<AlbumItem>();
+
+        foreach (var catalog in allCatalog)
+        {
+            var capturedItem = captured.FirstOrDefault(c => c.CatalogId == catalog.Id);
+            AlbumItems.Add(new AlbumItem
+            {
+                Catalog = catalog,
+                IsCaptured = capturedItem != null,
+                CapturedCreature = capturedItem
+            });
+        }
+
+        var total = AlbumItems.Count;
+        var capturedCount = AlbumItems.Count(a => a.IsCaptured);
+        AlbumStatusText = $"📖 Собрано: {capturedCount} из {total}";
+    }
+
     private void SwitchToGame()
     {
+        System.Diagnostics.Debug.WriteLine("🔥 SwitchToGame вызван!");
         IsGameActive = true;
         IsCollectionActive = false;
+        IsAlbumActive = false;
+        IsStarCatchActive = false;
     }
 
     private void SwitchToCollection()
     {
+        System.Diagnostics.Debug.WriteLine("🔥 SwitchToCollection вызван!");
         IsGameActive = false;
         IsCollectionActive = true;
+        IsAlbumActive = false;
+        IsStarCatchActive = false;
         LoadCollection();
+    }
+
+    private void SwitchToAlbum()
+    {
+        System.Diagnostics.Debug.WriteLine("🔥 SwitchToAlbum вызван!");
+        IsGameActive = false;
+        IsCollectionActive = false;
+        IsAlbumActive = true;
+        IsStarCatchActive = false;
+        LoadAlbum();
+    }
+
+    private void SwitchToStarCatch()
+    {
+        System.Diagnostics.Debug.WriteLine("🔥 SwitchToStarCatch вызван!");
+        IsGameActive = false;
+        IsCollectionActive = false;
+        IsAlbumActive = false;
+        IsStarCatchActive = true;
+    }
+
+    public void AddStarDust(int amount)
+    {
+        StarDust += amount;
+        StarDustText = $"✨ {StarDust}";
+        _db.SaveStarDust(StarDust);
+    }
+
+    private void SuperFeed()
+    {
+        if (StarDust < 20)
+        {
+            GameStatusText = "😅 Нужно 20 ✨ для супер-кормёжки!";
+            return;
+        }
+
+        var all = _db.GetAllCaptured();
+        var hungry = all.Any(c => c.Hunger < 100);
+
+        if (!hungry)
+        {
+            GameStatusText = "🌟 Все друзья уже сыты!";
+            return;
+        }
+
+        StarDust -= 20;
+        StarDustText = $"✨ {StarDust}";
+        _db.SaveStarDust(StarDust);
+
+        foreach (var creature in all)
+        {
+            creature.Hunger = 100;
+            creature.TimesFed++;
+            creature.LastFed = DateTime.Now;
+            _db.UpdateCreature(creature);
+        }
+
+        LoadCollection();
+        GameStatusText = "🌟 Все друзья сыты и счастливы! -20 ✨";
     }
 
     public bool TryCaptureCreature(CreatureCatalog catalog)
@@ -130,8 +317,10 @@ public partial class MainWindowViewModel : ObservableObject
 
         _db.AddCaptured(newFriend);
         LoadCollection();
+        LoadAlbum();
 
-        GameStatusText = $"🎉 Ты пригласил {catalog.Name}! У тебя теперь {FriendsCount} друзей!";
+        AddStarDust(10);
+        GameStatusText = $"🎉 Ты пригласил {catalog.Name}! +10 ✨";
         CollectionUpdated?.Invoke();
         return true;
     }
@@ -145,8 +334,9 @@ public partial class MainWindowViewModel : ObservableObject
         _db.UpdateCreature(creature);
         LoadCollection();
 
-        CreatureJumped?.Invoke(creature);
-        GameStatusText = $"🤗 Ты обнял {creature.Nickname}! ❤️";
+        AddStarDust(5);
+        CreatureHugged?.Invoke(creature);
+        GameStatusText = $"🤗 Ты обнял {creature.Nickname}! +5 ✨";
     }
 
     private void FeedCreature(CapturedCreature? creature)
@@ -159,8 +349,9 @@ public partial class MainWindowViewModel : ObservableObject
         _db.UpdateCreature(creature);
         LoadCollection();
 
+        AddStarDust(5);
         CreatureJumped?.Invoke(creature);
-        GameStatusText = $"🍎 Ты покормил {creature.Nickname}! 🌟";
+        GameStatusText = $"🍎 Ты покормил {creature.Nickname}! +5 ✨";
     }
 
     private void TellStory(CapturedCreature? creature)
@@ -170,6 +361,9 @@ public partial class MainWindowViewModel : ObservableObject
         creature.TimesHeardStory++;
         _db.UpdateCreature(creature);
         LoadCollection();
+
+        AddStarDust(3);
+        GameStatusText = $"📖 Ты послушал историю {creature.Nickname}! +3 ✨";
 
         var storyWindow = new Window();
         storyWindow.Title = $"📖 История {creature.Nickname}";
@@ -238,7 +432,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var yesButton = new Button
         {
-            Content = "✅ Да, отпустить",
+            Content = "✅ Да",
             Background = new SolidColorBrush(Color.Parse("#e74c3c")),
             Foreground = Brushes.White,
             Padding = new Thickness(15, 8, 15, 8)
@@ -247,6 +441,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _db.DeleteCaptured(creature.Id);
             LoadCollection();
+            LoadAlbum();
             GameStatusText = $"🕊️ Ты отпустил {creature.Nickname} на свободу. Он будет помнить тебя! ✨";
             CollectionUpdated?.Invoke();
             confirm.Close();
@@ -254,7 +449,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var noButton = new Button
         {
-            Content = "❌ Нет, оставить",
+            Content = "❌ Нет",
             Background = new SolidColorBrush(Color.Parse("#4a6fa5")),
             Foreground = Brushes.White,
             Padding = new Thickness(15, 8, 15, 8)

@@ -13,14 +13,12 @@ public class DatabaseService
 
     public DatabaseService()
     {
-        // База данных будет в папке с приложением
         var dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AlienStories",
             "aliens.db"
         );
 
-        // Создаём папку, если её нет
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
         _connectionString = $"Data Source={dbPath}";
@@ -64,19 +62,27 @@ public class DatabaseService
                 FOREIGN KEY(CatalogId) REFERENCES CreatureCatalog(Id)
             )";
 
+        // Таблица для игровых данных (звёздная пыль)
+        var createGameData = @"
+            CREATE TABLE IF NOT EXISTS GameData (
+                Key TEXT PRIMARY KEY,
+                Value TEXT
+            )";
+
         using var cmd1 = new SqliteCommand(createCatalog, connection);
         cmd1.ExecuteNonQuery();
 
         using var cmd2 = new SqliteCommand(createCaptured, connection);
         cmd2.ExecuteNonQuery();
 
-        // Заполняем каталог, если он пуст
+        using var cmd3 = new SqliteCommand(createGameData, connection);
+        cmd3.ExecuteNonQuery();
+
         SeedCatalog(connection);
     }
 
     private void SeedCatalog(SqliteConnection connection)
     {
-        // Проверяем, есть ли данные
         using var checkCmd = new SqliteCommand("SELECT COUNT(*) FROM CreatureCatalog", connection);
         var count = Convert.ToInt32(checkCmd.ExecuteScalar());
         if (count > 0) return;
@@ -372,21 +378,6 @@ public class DatabaseService
         cmd.ExecuteNonQuery();
     }
 
-    public PlayerProgress GetProgress()
-    {
-        var all = GetAllCaptured();
-        return new PlayerProgress
-        {
-            TotalFriends = all.Count,
-            TotalHugs = all.Sum(c => c.TimesHugged),
-            TotalFed = all.Sum(c => c.TimesFed),
-            TotalStoriesHeard = all.Sum(c => c.TimesHeardStory),
-            RarestCaught = all.Any()
-                ? all.OrderByDescending(c => c.Catalog!.Rarity).First().Catalog?.Name
-                : null
-        };
-    }
-
     public void DeleteCaptured(int id)
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -395,5 +386,33 @@ public class DatabaseService
         using var cmd = new SqliteCommand("DELETE FROM CapturedCreatures WHERE Id = @id", connection);
         cmd.Parameters.AddWithValue("@id", id);
         cmd.ExecuteNonQuery();
+    }
+
+    // ===== Звёздная пыль =====
+
+    public void SaveStarDust(int amount)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var cmd = new SqliteCommand(@"
+            INSERT OR REPLACE INTO GameData (Key, Value)
+            VALUES ('StarDust', @value)
+        ", connection);
+        cmd.Parameters.AddWithValue("@value", amount.ToString());
+        cmd.ExecuteNonQuery();
+    }
+
+    public int GetStarDust()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var cmd = new SqliteCommand(@"
+            SELECT Value FROM GameData WHERE Key = 'StarDust'
+        ", connection);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? int.Parse(result.ToString()) : 0;
     }
 }

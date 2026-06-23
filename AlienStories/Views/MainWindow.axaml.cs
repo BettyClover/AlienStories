@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     private readonly Random _random = new();
     private DispatcherTimer? _gameLoop;
     private DispatcherTimer? _spawnTimer;
+    private DispatcherTimer? _gameUpdateTimer;
 
     public MainWindow()
     {
@@ -29,32 +31,145 @@ public partial class MainWindow : Window
         _viewModel = new MainWindowViewModel();
         DataContext = _viewModel;
 
-        // Подписываемся на событие прыжка
         _viewModel.CreatureJumped += OnCreatureJumped;
-
-        // Подписываемся на событие обновления коллекции
         _viewModel.CollectionUpdated += OnCollectionUpdated;
 
         DrawStars();
         GameCanvas.PointerPressed += OnCanvasPointerPressed;
         StartGameLoop();
 
-        // Создаём начальных существ
         SpawnInitialAliens();
+
+        InitStarGame();
     }
+
+    private async void OnCreatureHugged(CapturedCreature creature)
+    {
+        _viewModel.GameStatusText = $"🤗 Ты обнял {creature.Nickname}! ❤️";
+
+        AlienCatControl? control = null;
+        foreach (var alien in _floatingAliens)
+        {
+            if (alien.Catalog.Id == creature.CatalogId)
+            {
+                control = GameCanvas.Children
+                    .FirstOrDefault(c => c.Tag == alien) as AlienCatControl;
+                break;
+            }
+        }
+
+        if (control == null)
+        {
+            await ShowHeartsInCenter();
+        }
+        else
+        {
+            await ShowHearts(control);
+        }
+    }
+
+    private async Task ShowHeartsInCenter()
+    {
+        var canvas = GameCanvas;
+        if (canvas == null) return;
+
+        var random = new Random();
+        var center = new Point(canvas.Width / 2, canvas.Height / 2);
+
+        for (int i = 0; i < 8; i++)
+        {
+            var heart = new TextBlock
+            {
+                Text = "❤️",
+                FontSize = 20 + random.Next(20),
+                Opacity = 1,
+                Foreground = new SolidColorBrush(
+                    Color.FromRgb(
+                        (byte)random.Next(200, 255),
+                        (byte)random.Next(50, 150),
+                        (byte)random.Next(50, 150)
+                    )
+                )
+            };
+
+            var offsetX = random.Next(-100, 100);
+            var offsetY = random.Next(-50, 50);
+
+            Canvas.SetLeft(heart, center.X + offsetX);
+            Canvas.SetTop(heart, center.Y + offsetY);
+            canvas.Children.Add(heart);
+
+            var startY = Canvas.GetTop(heart);
+            for (int step = 0; step < 40; step++)
+            {
+                await Task.Delay(20);
+                Canvas.SetTop(heart, startY - step * 2);
+                heart.Opacity = 1 - (step / 40.0);
+                Canvas.SetLeft(heart, Canvas.GetLeft(heart) + (step % 2 == 0 ? 0.5 : -0.5));
+            }
+
+            canvas.Children.Remove(heart);
+        }
+    }
+
+    private async Task ShowHearts(AlienCatControl cat)
+    {
+        var canvas = GameCanvas;
+        if (canvas == null) return;
+
+        var random = new Random();
+        var catPosition = new Point(
+            Canvas.GetLeft(cat) + cat.Width / 2,
+            Canvas.GetTop(cat) + cat.Height / 2
+        );
+
+        for (int i = 0; i < 6; i++)
+        {
+            var heart = new TextBlock
+            {
+                Text = "❤️",
+                FontSize = 16 + random.Next(16),
+                Opacity = 1,
+                Foreground = new SolidColorBrush(
+                    Color.FromRgb(
+                        (byte)random.Next(200, 255),
+                        (byte)random.Next(50, 150),
+                        (byte)random.Next(50, 150)
+                    )
+                )
+            };
+
+            var offsetX = random.Next(-40, 40);
+            var offsetY = random.Next(-20, 10);
+
+            Canvas.SetLeft(heart, catPosition.X + offsetX);
+            Canvas.SetTop(heart, catPosition.Y + offsetY);
+            canvas.Children.Add(heart);
+
+            var startY = Canvas.GetTop(heart);
+            for (int step = 0; step < 30; step++)
+            {
+                await Task.Delay(20);
+                Canvas.SetTop(heart, startY - step * 2);
+                heart.Opacity = 1 - (step / 30.0);
+            }
+
+            canvas.Children.Remove(heart);
+        }
+    }
+
+    // ============ ОСТАЛЬНЫЕ МЕТОДЫ ============
 
     private void SpawnInitialAliens()
     {
-        // Проверяем, сколько мест свободно
         var freeSlots = 10 - _viewModel.FriendsCount;
-        var count = Math.Min(3, freeSlots); // максимум 3, но не больше свободных мест
+        var count = Math.Min(3, freeSlots);
 
         for (int i = 0; i < count; i++)
         {
             SpawnAlien();
         }
 
-        // Если мест нет, показываем сообщение
         if (freeSlots <= 0)
         {
             _viewModel.GameStatusText = "😅 В приюте нет мест! Отпусти кого-нибудь, чтобы пригласить нового друга.";
@@ -63,13 +178,11 @@ public partial class MainWindow : Window
 
     private void OnCollectionUpdated()
     {
-        // Очищаем всех существ с экрана
         foreach (var alien in _floatingAliens.ToList())
         {
             RemoveAlien(alien);
         }
 
-        // Создаём новых
         SpawnInitialAliens();
     }
 
@@ -112,7 +225,6 @@ public partial class MainWindow : Window
         };
         _spawnTimer.Tick += (s, e) =>
         {
-            // Проверяем, есть ли свободные места
             if (_viewModel.FriendsCount < 10)
             {
                 SpawnAlien();
@@ -125,7 +237,6 @@ public partial class MainWindow : Window
     {
         if (GameCanvas == null) return;
 
-        // Проверяем, есть ли свободные места
         if (_viewModel.FriendsCount >= 10) return;
 
         var catalogList = _db.GetAllCatalog();
@@ -209,17 +320,14 @@ public partial class MainWindow : Window
 
             if (distance < alien.Size / 2)
             {
-                // Пытаемся пригласить
                 var success = _viewModel.TryCaptureCreature(alien.Catalog);
 
                 if (success)
                 {
-                    // Удаляем с экрана
                     RemoveAlien(alien);
                 }
                 else
                 {
-                    // Если не получилось (переполнено), показываем сообщение
                     _viewModel.GameStatusText = "😅 Твой приют переполнен! Отпусти кого-нибудь в коллекции.";
                 }
                 break;
@@ -244,8 +352,248 @@ public partial class MainWindow : Window
 
     private async void OnCreatureJumped(CapturedCreature creature)
     {
-        // Просто обновляем статус
         _viewModel.GameStatusText = $"🌈 {creature.Nickname} подпрыгнул от радости! ✨";
+
+        foreach (var alien in _floatingAliens)
+        {
+            if (alien.Catalog.Id == creature.CatalogId)
+            {
+                var control = GameCanvas.Children
+                    .FirstOrDefault(c => c.Tag == alien) as AlienCatControl;
+                if (control != null)
+                {
+                    await ShowHearts(control);
+                }
+                break;
+            }
+        }
+    }
+
+    // ============ ИГРА "ПОЙМАЙ ЗВЕЗДУ" ============
+
+    private readonly List<FallingStar> _gameStars = new();
+    private DispatcherTimer? _gameTimer;
+    private DispatcherTimer? _gameSpawnTimer;
+    private int _gameScore = 0;
+    private int _gameTimeLeft = 30;
+    private bool _isGamePlaying = false;
+
+    private void InitStarGame()
+    {
+        StarGameCanvas.PointerPressed += OnGameCanvasPointerPressed;
+        GameStartButton.Click += OnGameStartClick;
+
+        // Обновляем таймеры UI
+        var scoreText = this.FindControl<TextBlock>("GameScoreText");
+        var timerText = this.FindControl<TextBlock>("GameTimerText");
+
+        UpdateGameUI();
+    }
+
+    private void OnGameStartClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_isGamePlaying)
+        {
+            StopGame();
+        }
+        else
+        {
+            StartGame();
+        }
+    }
+
+    private void StartGame()
+    {
+        _isGamePlaying = true;
+        _gameScore = 0;
+        _gameTimeLeft = 30;
+        _gameStars.Clear();
+        StarGameCanvas.Children.Clear();
+        GameStartButton.Content = "⏹️ Стоп";
+        UpdateGameUI();
+
+        // Таймер для обратного отсчёта
+        _gameTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _gameTimer.Tick += (s, e) => OnGameTimerTick();
+        _gameTimer.Start();
+
+        // Таймер для создания звёзд
+        _gameSpawnTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(800)
+        };
+        _gameSpawnTimer.Tick += (s, e) => SpawnGameStar();
+        _gameSpawnTimer.Start();
+
+        // 👇 НОВЫЙ ТАЙМЕР ДЛЯ ОБНОВЛЕНИЯ ПОЗИЦИЙ ЗВЁЗД
+        var updateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(16) // ~60 FPS
+        };
+        updateTimer.Tick += (s, e) => UpdateGameStars();
+        updateTimer.Start();
+        _gameUpdateTimer = updateTimer; // нужно добавить поле
+    }
+
+    private void StopGame()
+    {
+        _isGamePlaying = false;
+        _gameTimer?.Stop();
+        _gameSpawnTimer?.Stop();
+        _gameUpdateTimer?.Stop(); // 👈 ДОБАВЬ ЭТО
+
+        GameStartButton.Content = "▶️ Начать";
+
+        foreach (var star in _gameStars)
+        {
+            StarGameCanvas.Children.Remove(star.Control);
+        }
+        _gameStars.Clear();
+    }
+
+    private void OnGameTimerTick()
+    {
+        _gameTimeLeft--;
+        UpdateGameUI();
+
+        if (_gameTimeLeft <= 0)
+        {
+            StopGame();
+            _viewModel.AddStarDust(_gameScore);
+            _viewModel.GameStatusText = $"🌟 Ты поймал {_gameScore} звёзд! +{_gameScore} ✨";
+        }
+    }
+
+    private void SpawnGameStar()
+    {
+        if (!_isGamePlaying || StarGameCanvas == null) return;
+
+        var size = 20 + _random.Next(15);
+        var x = _random.Next(20, (int)StarGameCanvas.Width - 20);
+        var speed = 1.5 + _random.NextDouble() * 2;
+
+        var star = new Avalonia.Controls.Shapes.Ellipse
+        {
+            Width = size,
+            Height = size,
+            Fill = new SolidColorBrush(Color.FromRgb(
+                (byte)_random.Next(200, 255),
+                (byte)_random.Next(200, 255),
+                (byte)_random.Next(50, 100)
+            )),
+            Opacity = 1,
+            Tag = _gameStars.Count // Уникальный тег для идентификации
+        };
+
+        // Сохраняем координаты в объекте FallingStar
+        var fallingStar = new FallingStar
+        {
+            Control = star,
+            X = x,
+            Y = -size,
+            Speed = speed,
+            Size = size
+        };
+
+        _gameStars.Add(fallingStar);
+
+        // Устанавливаем позицию на Canvas
+        Canvas.SetLeft(star, fallingStar.X);
+        Canvas.SetTop(star, fallingStar.Y);
+        StarGameCanvas.Children.Add(star);
+    }
+
+    private void UpdateGameStars()
+    {
+        if (!_isGamePlaying || StarGameCanvas == null) return;
+
+        foreach (var star in _gameStars.ToList())
+        {
+            // Обновляем координаты в объекте
+            star.Y += star.Speed;
+
+            // Обновляем позицию на Canvas
+            Canvas.SetTop(star.Control, star.Y);
+            Canvas.SetLeft(star.Control, star.X);
+
+            // Если звезда упала за пределы экрана — удаляем
+            if (star.Y > StarGameCanvas.Height + 50)
+            {
+                StarGameCanvas.Children.Remove(star.Control);
+                _gameStars.Remove(star);
+            }
+        }
+    }
+
+    private void OnGameCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_isGamePlaying) return;
+
+        var point = e.GetPosition(StarGameCanvas);
+
+        for (int i = _gameStars.Count - 1; i >= 0; i--)
+        {
+            var star = _gameStars[i];
+
+            var distance = Math.Sqrt(
+                Math.Pow(point.X - star.X, 2) +
+                Math.Pow(point.Y - star.Y, 2)
+            );
+
+            if (distance < star.Size / 2)
+            {
+                // Удаляем звезду
+                StarGameCanvas.Children.Remove(star.Control);
+                _gameStars.RemoveAt(i);
+                _gameScore++;
+
+                // 👇 ДОБАВЛЯЕМ ЗВЁЗДНУЮ ПЫЛЬ ЗА КАЖДУЮ ПОЙМАННУЮ ЗВЕЗДУ
+                _viewModel.AddStarDust(1);
+
+                UpdateGameUI();
+
+                // Эффект вспышки
+                var flash = new Avalonia.Controls.Shapes.Ellipse
+                {
+                    Width = 30,
+                    Height = 30,
+                    Fill = new SolidColorBrush(Color.FromRgb(255, 255, 200)),
+                    Opacity = 0.8
+                };
+                Canvas.SetLeft(flash, star.X - 15);
+                Canvas.SetTop(flash, star.Y - 15);
+                StarGameCanvas.Children.Add(flash);
+
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    await Task.Delay(150);
+                    StarGameCanvas.Children.Remove(flash);
+                });
+
+                break;
+            }
+        }
+    }
+
+    private void UpdateGameUI()
+    {
+        var scoreText = this.FindControl<TextBlock>("GameScoreText");
+        var timerText = this.FindControl<TextBlock>("GameTimerText");
+
+        if (scoreText != null) scoreText.Text = _gameScore.ToString();
+        if (timerText != null) timerText.Text = _gameTimeLeft.ToString();
+    }
+
+    private class FallingStar
+    {
+        public Avalonia.Controls.Shapes.Ellipse Control { get; set; } = new();
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Speed { get; set; }
+        public double Size { get; set; }
     }
 
     private class FloatingAlien
