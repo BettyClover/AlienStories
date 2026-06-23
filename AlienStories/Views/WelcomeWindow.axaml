@@ -1,0 +1,59 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="380"
+        x:Class="AlienStories.Views.WelcomeWindow"
+        Title="🌟 Добро пожаловать!"
+        Width="450" Height="400"
+        Background="#0a0a1a"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    
+    <Border Background="#1a1a2e" CornerRadius="20" Margin="15">
+        <StackPanel Margin="25" Spacing="12">
+            <!-- Заголовок -->
+            <TextBlock Text="🌠*࿏⭒ Звёздный приют..." 
+                       FontSize="26" 
+                       FontWeight="Bold" 
+                       Foreground="Gold" 
+                       HorizontalAlignment="Center" />
+            
+            <Border Background="#0a0a1a" CornerRadius="10" Padding="15">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="✨ Нажимай на котиков-инопланетян, чтобы пригласить их в твой приют" 
+                               FontSize="13" 
+                               Foreground="#ccc" 
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="✨ Корми и обнимай своих друзей, чтобы они были счастливы" 
+                               FontSize="13" 
+                               Foreground="#ccc" 
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="✨ Собирай всех существ в альбоме. Вы можете найти самых редких из них" 
+                               FontSize="13" 
+                               Foreground="#ccc" 
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="✨ Играй в мини-игры и зарабатывай звёздную пыль" 
+                               FontSize="13" 
+                               Foreground="#ccc" 
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="✨ Трать звёздную пыль на супер-кормёжку своих подопечных!" 
+                               FontSize="13" 
+                               Foreground="#ccc" 
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            
+            <!-- Кнопка начала -->
+            <Button x:Name="StartButton" 
+                    Content="🚀 Начать игру!" 
+                    Background="#4a6fa5" 
+                    Foreground="White" 
+                    FontSize="17" 
+                    FontWeight="Bold"
+                    Padding="20,10"
+                    HorizontalAlignment="Center"
+                    CornerRadius="8" />
+        </StackPanel>
+    </Border>
+</Window>
