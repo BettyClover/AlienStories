@@ -60,12 +60,14 @@
 		</Border>
 
 		<Grid Margin="20">
-			<Border x:Name="GamePanel" Background="#0a0a1a" CornerRadius="15" IsVisible="{Binding IsGameActive}">
+			<Border x:Name="GamePanel" Background="#0a0a1a" CornerRadius="15"
+					IsVisible="{Binding IsGameActive}">
 				<DockPanel>
 					<Border DockPanel.Dock="Bottom" Background="#1a1a2e" Padding="10" CornerRadius="10" Margin="0,10,0,0">
 						<TextBlock Text="{Binding GameStatusText}" FontSize="14" Foreground="#ccc" TextAlignment="Center" />
 					</Border>
-					<Canvas x:Name="GameCanvas" Background="Transparent" ClipToBounds="True" Width="800" Height="500" />
+					<Canvas x:Name="GameCanvas" Background="Transparent" ClipToBounds="True" 
+							HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 				</DockPanel>
 			</Border>
 

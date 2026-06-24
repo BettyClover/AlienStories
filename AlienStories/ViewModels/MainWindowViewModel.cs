@@ -318,7 +318,6 @@ public partial class MainWindowViewModel : ObservableObject
         {
             return false;
         }
-
         var newFriend = new CapturedCreature
         {
             CatalogId = catalog.Id,
@@ -335,7 +334,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         AddStarDust(10);
         GameStatusText = $"🎉 Ты пригласил {catalog.Name}! +10 ✨";
-        CollectionUpdated?.Invoke();
+
         return true;
     }
 

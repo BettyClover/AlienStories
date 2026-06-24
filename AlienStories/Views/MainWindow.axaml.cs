@@ -15,6 +15,7 @@ namespace AlienStories.Views;
 
 public partial class MainWindow : Window
 {
+    private const int MaxAliensOnField = 15;
     private readonly DatabaseService _db;
     private readonly MainWindowViewModel _viewModel;
     private readonly List<FloatingAlien> _floatingAliens = new();
@@ -164,7 +165,15 @@ public partial class MainWindow : Window
 
     private void SpawnInitialAliens()
     {
-        var freeSlots = 10 - _viewModel.FriendsCount;
+        if (GameCanvas == null) return;
+
+        if (GameCanvas.Bounds.Width < 100)
+        {
+            Dispatcher.UIThread.Post(() => SpawnInitialAliens(), DispatcherPriority.Background);
+            return;
+        }
+
+        var freeSlots = Math.Min(10 - _viewModel.FriendsCount, MaxAliensOnField);
         var count = Math.Min(3, freeSlots);
 
         for (int i = 0; i < count; i++)
@@ -184,8 +193,7 @@ public partial class MainWindow : Window
         {
             RemoveAlien(alien);
         }
-
-        SpawnInitialAliens();
+        //SpawnInitialAliens();
     }
 
     private void DrawStars()
@@ -206,10 +214,26 @@ public partial class MainWindow : Window
                 Opacity = 0.3 + _random.NextDouble() * 0.7
             };
 
-            Canvas.SetLeft(star, _random.Next(0, 800));
-            Canvas.SetTop(star, _random.Next(0, 500));
+            Canvas.SetLeft(star, _random.Next(0, (int)GameCanvas.Bounds.Width));
+            Canvas.SetTop(star, _random.Next(0, (int)GameCanvas.Bounds.Height));
             GameCanvas.Children.Add(star);
         }
+    }
+
+    private void RedrawStars()
+    {
+        if (GameCanvas == null) return;
+
+        var starsToRemove = GameCanvas.Children.OfType<Avalonia.Controls.Shapes.Ellipse>().ToList();
+        foreach (var star in starsToRemove)
+            GameCanvas.Children.Remove(star);
+
+        DrawStars();
+    }
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        RedrawStars();
     }
 
     private void StartGameLoop()
@@ -227,7 +251,7 @@ public partial class MainWindow : Window
         };
         _spawnTimer.Tick += (s, e) =>
         {
-            if (_viewModel.FriendsCount < 10)
+            if (_viewModel.FriendsCount < 10 && _floatingAliens.Count < MaxAliensOnField)
             {
                 SpawnAlien();
             }
@@ -239,7 +263,14 @@ public partial class MainWindow : Window
     {
         if (GameCanvas == null) return;
 
+        if (_floatingAliens.Count >= MaxAliensOnField) return;
+
         if (_viewModel.FriendsCount >= 10) return;
+
+        var width = GameCanvas.Bounds.Width;
+        var height = GameCanvas.Bounds.Height;
+
+        if (width < 100 || height < 100) return;
 
         var catalogList = _db.GetAllCatalog();
         if (catalogList.Count == 0) return;
@@ -249,8 +280,8 @@ public partial class MainWindow : Window
         var alien = new FloatingAlien
         {
             Catalog = catalogItem,
-            X = _random.Next(50, (int)GameCanvas.Width - 50),
-            Y = _random.Next(50, (int)GameCanvas.Height - 50),
+            X = _random.Next(50, (int)width - 50),
+            Y = _random.Next(50, (int)height - 50),
             SpeedX = (float)(_random.NextDouble() * 2 - 1) * 100,
             SpeedY = (float)(_random.NextDouble() * 2 - 1) * 100,
             Size = 50 + _random.Next(20),
@@ -292,9 +323,9 @@ public partial class MainWindow : Window
 
             var halfSize = alien.Size / 2;
             if (alien.X < halfSize) { alien.X = halfSize; alien.SpeedX *= -1; }
-            if (alien.X > GameCanvas.Width - halfSize) { alien.X = GameCanvas.Width - halfSize; alien.SpeedX *= -1; }
+            if (alien.X > GameCanvas.Bounds.Width - halfSize) { alien.X = GameCanvas.Bounds.Width - halfSize; alien.SpeedX *= -1; }
             if (alien.Y < halfSize) { alien.Y = halfSize; alien.SpeedY *= -1; }
-            if (alien.Y > GameCanvas.Height - halfSize) { alien.Y = GameCanvas.Height - halfSize; alien.SpeedY *= -1; }
+            if (alien.Y > GameCanvas.Bounds.Height - halfSize) { alien.Y = GameCanvas.Bounds.Height - halfSize; alien.SpeedY *= -1; }
 
             var control = GameCanvas.Children
                 .FirstOrDefault(c => c.Tag == alien) as AlienCatControl;
@@ -667,13 +698,6 @@ public partial class MainWindow : Window
                 index++;
             }
         }
-    }
-
-
-
-    protected override void OnSizeChanged(SizeChangedEventArgs e)
-    {
-        base.OnSizeChanged(e);
     }
 
     private async void OnMemoryCardClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
