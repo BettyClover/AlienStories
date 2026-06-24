@@ -8,6 +8,7 @@ namespace AlienStories.Models;
 
 public class CapturedCreature
 {
+    public int ShapeType { get; set; }
     public int Id { get; set; }
     public int CatalogId { get; set; }
     public string Nickname { get; set; } = string.Empty;

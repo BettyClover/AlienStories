@@ -1,6 +1,8 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using System;
+using System.Collections.Generic;
 
 namespace AlienStories.Views;
 
@@ -35,7 +37,6 @@ public class AlienCatControl : Control
         set => SetValue(SizeProperty, value);
     }
 
-    // Свойство для анимации прыжка
     public static readonly StyledProperty<double> JumpProperty =
         AvaloniaProperty.Register<AlienCatControl, double>(nameof(Jump), 0);
 
@@ -45,9 +46,18 @@ public class AlienCatControl : Control
         set => SetValue(JumpProperty, value);
     }
 
+    public static readonly StyledProperty<int> ShapeTypeProperty =
+        AvaloniaProperty.Register<AlienCatControl, int>(nameof(ShapeType), 0);
+
+    public int ShapeType
+    {
+        get => GetValue(ShapeTypeProperty);
+        set => SetValue(ShapeTypeProperty, value);
+    }
+
     static AlienCatControl()
     {
-        AffectsRender<AlienCatControl>(ColorProperty, IsHappyProperty, SizeProperty, JumpProperty);
+        AffectsRender<AlienCatControl>(ColorProperty, IsHappyProperty, SizeProperty, JumpProperty, ShapeTypeProperty);
     }
 
     public override void Render(DrawingContext context)
@@ -56,21 +66,35 @@ public class AlienCatControl : Control
         var centerX = size / 2;
         var centerY = size / 2;
 
-        // Смещение для прыжка
         var jumpOffset = -Jump * size * 0.3;
+        var color = Avalonia.Media.Color.Parse(Color);
+        var brush = new SolidColorBrush(color);
 
-        var brush = new SolidColorBrush(Avalonia.Media.Color.Parse(Color));
+        // 🎨 РИСУЕМ ТЕЛО В ЗАВИСИМОСТИ ОТ ФОРМЫ
+        // ShapeType: 0=Круг, 1=Треугольник, 2=Квадрат, 3=Звезда, 4=Капля
+        switch (ShapeType)
+        {
+            case 0:
+                DrawCircle(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+            case 1:
+                DrawTriangle(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+            case 2:
+                DrawSquare(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+            case 3:
+                DrawStar(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+            case 4:
+                DrawDrop(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+            default:
+                DrawCircle(context, brush, centerX, centerY + jumpOffset, size);
+                break;
+        }
 
-        // ---- Тело ----
-        context.DrawEllipse(
-            brush,
-            null,
-            new Point(centerX, centerY + jumpOffset),
-            size / 2.2,
-            size / 2.2
-        );
-
-        // ---- Уши ----
+        // ---- Уши (всегда одинаковые) ----
         var earSize = size * 0.3;
         var earY = centerY + jumpOffset - size / 2.2;
 
@@ -203,5 +227,68 @@ public class AlienCatControl : Control
             new Point(centerX + size * 0.08, whiskerY),
             new Point(centerX + size * 0.08 + whiskerLength, whiskerY + size * 0.04)
         );
+    }
+
+    // ===== МЕТОДЫ ДЛЯ РИСОВАНИЯ РАЗНЫХ ФОРМ =====
+
+    private void DrawCircle(DrawingContext context, IBrush brush, double cx, double cy, double size)
+    {
+        context.DrawEllipse(brush, null, new Point(cx, cy), size / 2.2, size / 2.2);
+    }
+
+    private void DrawTriangle(DrawingContext context, IBrush brush, double cx, double cy, double size)
+    {
+        var s = size / 2.2;
+        var geom = new StreamGeometry();
+        using (var ctx = geom.Open())
+        {
+            ctx.BeginFigure(new Point(cx, cy - s), true);
+            ctx.LineTo(new Point(cx - s, cy + s));
+            ctx.LineTo(new Point(cx + s, cy + s));
+            ctx.EndFigure(true);
+        }
+        context.DrawGeometry(brush, null, geom);
+    }
+
+    private void DrawSquare(DrawingContext context, IBrush brush, double cx, double cy, double size)
+    {
+        var s = size / 2.5;
+        context.DrawRectangle(brush, null, new Rect(cx - s, cy - s, s * 2, s * 2));
+    }
+
+    private void DrawStar(DrawingContext context, IBrush brush, double cx, double cy, double size)
+    {
+        var outer = size / 2.2;
+        var inner = outer * 0.4;
+        var points = new List<Point>();
+        for (int i = 0; i < 10; i++)
+        {
+            var r = i % 2 == 0 ? outer : inner;
+            var angle = Math.PI / 2 + i * 2 * Math.PI / 10;
+            points.Add(new Point(cx + r * Math.Cos(angle), cy + r * Math.Sin(angle)));
+        }
+        var geom = new StreamGeometry();
+        using (var ctx = geom.Open())
+        {
+            ctx.BeginFigure(points[0], true);
+            for (int i = 1; i < points.Count; i++)
+                ctx.LineTo(points[i]);
+            ctx.EndFigure(true);
+        }
+        context.DrawGeometry(brush, null, geom);
+    }
+
+    private void DrawDrop(DrawingContext context, IBrush brush, double cx, double cy, double size)
+    {
+        var s = size / 2.2;
+        var geom = new StreamGeometry();
+        using (var ctx = geom.Open())
+        {
+            ctx.BeginFigure(new Point(cx, cy - s), true);
+            ctx.QuadraticBezierTo(new Point(cx + s, cy + s * 0.3), new Point(cx, cy + s));
+            ctx.QuadraticBezierTo(new Point(cx - s, cy + s * 0.3), new Point(cx, cy - s));
+            ctx.EndFigure(true);
+        }
+        context.DrawGeometry(brush, null, geom);
     }
 }

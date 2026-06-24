@@ -5,7 +5,9 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Data.Sqlite;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
@@ -312,30 +314,54 @@ public partial class MainWindowViewModel : ObservableObject
         GameStatusText = "🌟 Все друзья сыты и счастливы! -20 ✨";
     }
 
-    public bool TryCaptureCreature(CreatureCatalog catalog)
+    public List<CapturedCreature> GetAllCaptured()
     {
-        if (CapturedCreatures.Count >= 10)
+        var result = new List<CapturedCreature>();
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var cmd = new SqliteCommand(@"
+        SELECT c.*, cat.* 
+        FROM CapturedCreatures c
+        JOIN CreatureCatalog cat ON c.CatalogId = cat.Id
+        ORDER BY c.CaptureDate DESC
+    ", connection);
+
+        using var reader = cmd.ExecuteReader();
+
+        while (reader.Read())
         {
-            return false;
+            var creature = new CapturedCreature
+            {
+                Id = reader.GetInt32(0),
+                CatalogId = reader.GetInt32(1),
+                Nickname = reader.GetString(2),
+                CaptureDate = DateTime.Parse(reader.GetString(3)),
+                Size = reader.GetDouble(4),
+                IsShiny = reader.GetInt32(5) == 1,
+                Hunger = reader.GetInt32(6),
+                TimesHugged = reader.GetInt32(7),
+                TimesFed = reader.GetInt32(8),
+                TimesHeardStory = reader.GetInt32(9),
+                LastFed = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10)),
+                LastHugged = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11)),
+                ShapeType = reader.IsDBNull(12) ? 0 : reader.GetInt32(12), // 👈 ДОБАВИТЬ
+                Catalog = new CreatureCatalog
+                {
+                    Id = reader.GetInt32(13),
+                    Name = reader.GetString(14),
+                    Planet = reader.GetString(15),
+                    Rarity = reader.GetInt32(16),
+                    ColorHex = reader.GetString(17),
+                    Emoji = reader.GetString(18),
+                    Description = reader.GetString(19),
+                    Story = reader.GetString(20),
+                    ShapeType = reader.IsDBNull(21) ? 0 : reader.GetInt32(21)
+                }
+            };
+            result.Add(creature);
         }
-        var newFriend = new CapturedCreature
-        {
-            CatalogId = catalog.Id,
-            Nickname = catalog.Name,
-            CaptureDate = DateTime.Now,
-            Size = 0.8 + new Random().NextDouble() * 0.4,
-            IsShiny = new Random().Next(100) < 10,
-            Hunger = 100
-        };
-
-        _db.AddCaptured(newFriend);
-        LoadCollection();
-        LoadAlbum();
-
-        AddStarDust(10);
-        GameStatusText = $"🎉 Ты пригласил {catalog.Name}! +10 ✨";
-
-        return true;
+        return result;
     }
 
     private void HugCreature(CapturedCreature? creature)

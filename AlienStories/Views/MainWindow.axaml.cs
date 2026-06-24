@@ -286,7 +286,8 @@ public partial class MainWindow : Window
             SpeedY = (float)(_random.NextDouble() * 2 - 1) * 100,
             Size = 50 + _random.Next(20),
             IsHappy = false,
-            Color = Color.Parse(catalogItem.ColorHex)
+            Color = Color.Parse(catalogItem.ColorHex),
+            ShapeType = catalogItem.ShapeType
         };
 
         _floatingAliens.Add(alien);
@@ -301,6 +302,7 @@ public partial class MainWindow : Window
             Height = alien.Size,
             Color = alien.Color.ToString(),
             IsHappy = alien.IsHappy,
+            ShapeType = alien.ShapeType,
             Tag = alien
         };
 
@@ -852,5 +854,6 @@ public partial class MainWindow : Window
         public double Size { get; set; }
         public bool IsHappy { get; set; }
         public Color Color { get; set; }
+        public int ShapeType { get; set; }
     }
 }

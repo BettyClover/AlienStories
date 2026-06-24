@@ -31,36 +31,36 @@ public class DatabaseService
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        // Таблица каталога существ
         var createCatalog = @"
             CREATE TABLE IF NOT EXISTS CreatureCatalog (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                Planet TEXT NOT NULL,
-                Rarity INTEGER NOT NULL,
-                ColorHex TEXT NOT NULL,
-                Emoji TEXT NOT NULL,
-                Description TEXT NOT NULL,
-                Story TEXT NOT NULL
-            )";
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name TEXT NOT NULL,
+            Planet TEXT NOT NULL,
+            Rarity INTEGER NOT NULL,
+            ColorHex TEXT NOT NULL,
+            Emoji TEXT NOT NULL,
+            Description TEXT NOT NULL,
+            Story TEXT NOT NULL,
+            ShapeType INTEGER NOT NULL DEFAULT 0
+        )";
 
-        // Таблица пойманных существ
         var createCaptured = @"
             CREATE TABLE IF NOT EXISTS CapturedCreatures (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                CatalogId INTEGER NOT NULL,
-                Nickname TEXT NOT NULL,
-                CaptureDate TEXT NOT NULL,
-                Size REAL NOT NULL,
-                IsShiny INTEGER NOT NULL,
-                Hunger INTEGER NOT NULL DEFAULT 100,
-                TimesHugged INTEGER NOT NULL DEFAULT 0,
-                TimesFed INTEGER NOT NULL DEFAULT 0,
-                TimesHeardStory INTEGER NOT NULL DEFAULT 0,
-                LastFed TEXT,
-                LastHugged TEXT,
-                FOREIGN KEY(CatalogId) REFERENCES CreatureCatalog(Id)
-            )";
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            CatalogId INTEGER NOT NULL,
+            Nickname TEXT NOT NULL,
+            CaptureDate TEXT NOT NULL,
+            Size REAL NOT NULL,
+            IsShiny INTEGER NOT NULL,
+            Hunger INTEGER NOT NULL DEFAULT 100,
+            TimesHugged INTEGER NOT NULL DEFAULT 0,
+            TimesFed INTEGER NOT NULL DEFAULT 0,
+            TimesHeardStory INTEGER NOT NULL DEFAULT 0,
+            LastFed TEXT,
+            LastHugged TEXT,
+            ShapeType INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY(CatalogId) REFERENCES CreatureCatalog(Id)
+        )";
 
         // Таблица для игровых данных (звёздная пыль)
         var createGameData = @"
@@ -92,9 +92,9 @@ public class DatabaseService
         foreach (var alien in aliens)
         {
             using var cmd = new SqliteCommand(@"
-                INSERT INTO CreatureCatalog (Name, Planet, Rarity, ColorHex, Emoji, Description, Story)
-                VALUES (@name, @planet, @rarity, @color, @emoji, @desc, @story)
-            ", connection);
+            INSERT INTO CreatureCatalog (Name, Planet, Rarity, ColorHex, Emoji, Description, Story, ShapeType)
+            VALUES (@name, @planet, @rarity, @color, @emoji, @desc, @story, @shapeType)
+        ", connection);
 
             cmd.Parameters.AddWithValue("@name", alien.Name);
             cmd.Parameters.AddWithValue("@planet", alien.Planet);
@@ -103,6 +103,7 @@ public class DatabaseService
             cmd.Parameters.AddWithValue("@emoji", alien.Emoji);
             cmd.Parameters.AddWithValue("@desc", alien.Description);
             cmd.Parameters.AddWithValue("@story", alien.Story);
+            cmd.Parameters.AddWithValue("@shapeType", alien.ShapeType);
             cmd.ExecuteNonQuery();
         }
     }
@@ -110,143 +111,158 @@ public class DatabaseService
     private List<CreatureCatalog> GetDefaultAliens()
     {
         return new List<CreatureCatalog>
-        {
-            new() {
-                Name = "Пылевой жуй",
-                Planet = "Туманность Андромеды",
-                Rarity = 1,
-                ColorHex = "#FFB6C1",
-                Emoji = "🐱",
-                Description = "Маленький пушистый комочек",
-                Story = "Я родился в туманности, где звёзды танцуют. Однажды я увидел свет от твоего окна и понял — там тепло. Можно я останусь?"
-            },
-            new() {
-                Name = "Светлячок",
-                Planet = "Звездная пыль",
-                Rarity = 2,
-                ColorHex = "#FFD700",
-                Emoji = "✨",
-                Description = "Светится в темноте",
-                Story = "Когда темно, я свечусь, чтобы другие не боялись. Но иногда мне самому нужен кто-то, кто посветит для меня."
-            },
-            new() {
-                Name = "Облачко",
-                Planet = "Небесная высь",
-                Rarity = 1,
-                ColorHex = "#87CEEB",
-                Emoji = "☁️",
-                Description = "Плавающий зефир",
-                Story = "Я летал между галактик и видел много чудес. Но самое прекрасное — это когда меня обнимают."
-            },
-            new() {
-                Name = "Мохнатик",
-                Planet = "Колючий лес",
-                Rarity = 2,
-                ColorHex = "#98FB98",
-                Emoji = "🌿",
-                Description = "Весь в колючках, но нежный внутри",
-                Story = "Я колючий только снаружи. Внутри я мягкий и пушистый. Просто я стесняюсь."
-            },
-            new() {
-                Name = "Звёздный кот",
-                Planet = "Млечный путь",
-                Rarity = 3,
-                ColorHex = "#9370DB",
-                Emoji = "🐈",
-                Description = "Кот, который живёт среди звёзд",
-                Story = "Я путешествую между мирами. В каждом мире я нахожу друзей. Ты — мой самый любимый друг."
-            },
-            new() {
-                Name = "Ириска",
-                Planet = "Сахарная галактика",
-                Rarity = 1,
-                ColorHex = "#FF69B4",
-                Emoji = "🍬",
-                Description = "Сладкая и нежная",
-                Story = "Я сделана из звёздного сахара. Если ты меня обнимешь, я стану ещё слаще!"
-            },
-            new() {
-                Name = "Туманник",
-                Planet = "Туманность Ориона",
-                Rarity = 3,
-                ColorHex = "#4169E1",
-                Emoji = "🌌",
-                Description = "Загадочный и молчаливый",
-                Story = "Я вижу все тайны вселенной. Но твоя доброта — самая большая тайна, которую я хочу разгадать."
-            },
-            new() {
-                Name = "Плюшевый",
-                Planet = "Мягкая планета",
-                Rarity = 2,
-                ColorHex = "#DDA0DD",
-                Emoji = "🧸",
-                Description = "Мягкий, как игрушка",
-                Story = "Меня создали из облаков и любви. Я здесь, чтобы дарить тепло."
-            },
-            new() {
-                Name = "Лунный заяц",
-                Planet = "Луна",
-                Rarity = 3,
-                ColorHex = "#C0C0C0",
-                Emoji = "🌙",
-                Description = "Пришёл с Луны",
-                Story = "Я прыгал по лунным кратерам и увидел, как ты улыбаешься. Теперь я хочу быть рядом."
-            },
-            new() {
-                Name = "Искринка",
-                Planet = "Пылающая звезда",
-                Rarity = 4,
-                ColorHex = "#FF4500",
-                Emoji = "🔥",
-                Description = "Огненная, но тёплая",
-                Story = "Я родилась в сердце звезды. Когда я с тобой, я чувствую себя дома."
-            },
-            new() {
-                Name = "Соня",
-                Planet = "Сонная галактика",
-                Rarity = 1,
-                ColorHex = "#B0C4DE",
-                Emoji = "😴",
-                Description = "Всегда хочет спать",
-                Story = "Я сплю 23 часа в сутки. Но ради объятий я готова проснуться."
-            },
-            new() {
-                Name = "Радужка",
-                Planet = "Цветной мир",
-                Rarity = 2,
-                ColorHex = "#FF1493",
-                Emoji = "🌈",
-                Description = "Переливается всеми цветами",
-                Story = "Я — частичка радуги. Когда ты грустишь, я прихожу, чтобы раскрасить твой день."
-            },
-            new() {
-                Name = "Тихоня",
-                Planet = "Тихая планета",
-                Rarity = 2,
-                ColorHex = "#4682B4",
-                Emoji = "🤫",
-                Description = "Говорит шёпотом",
-                Story = "Я не люблю шум. Но с тобой я чувствую себя спокойно и уютно."
-            },
-            new() {
-                Name = "Звёздный странник",
-                Planet = "Вечность",
-                Rarity = 4,
-                ColorHex = "#FFD700",
-                Emoji = "⭐",
-                Description = "Путешествует сквозь время",
-                Story = "Я видел рождение и смерть звёзд. Но твоя доброта — вечна."
-            },
-            new() {
-                Name = "Пушистик",
-                Planet = "Мягкая планета",
-                Rarity = 1,
-                ColorHex = "#F5DEB3",
-                Emoji = "🐾",
-                Description = "Пушистый и добрый",
-                Story = "Я просто хочу, чтобы меня гладили. Это всё, что мне нужно."
-            }
-        };
+    {
+        new() {
+            Name = "Пылевой жуй",
+            Planet = "Туманность Андромеды",
+            Rarity = 1,
+            ColorHex = "#FFB6C1",
+            Emoji = "🐱",
+            Description = "Маленький пушистый комочек",
+            Story = "Я родился в туманности, где звёзды танцуют. Однажды я увидел свет от твоего окна и понял — там тепло. Можно я останусь?",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Светлячок",
+            Planet = "Звездная пыль",
+            Rarity = 2,
+            ColorHex = "#FFD700",
+            Emoji = "✨",
+            Description = "Светится в темноте",
+            Story = "Когда темно, я свечусь, чтобы другие не боялись. Но иногда мне самому нужен кто-то, кто посветит для меня.",
+            ShapeType = 3
+        },
+        new() {
+            Name = "Облачко",
+            Planet = "Небесная высь",
+            Rarity = 1,
+            ColorHex = "#87CEEB",
+            Emoji = "☁️",
+            Description = "Плавающий зефир",
+            Story = "Я летал между галактик и видел много чудес. Но самое прекрасное — это когда меня обнимают.",
+            ShapeType = 4
+        },
+        new() {
+            Name = "Мохнатик",
+            Planet = "Колючий лес",
+            Rarity = 2,
+            ColorHex = "#98FB98",
+            Emoji = "🌿",
+            Description = "Весь в колючках, но нежный внутри",
+            Story = "Я колючий только снаружи. Внутри я мягкий и пушистый. Просто я стесняюсь.",
+            ShapeType = 1
+        },
+        new() {
+            Name = "Звёздный кот",
+            Planet = "Млечный путь",
+            Rarity = 3,
+            ColorHex = "#9370DB",
+            Emoji = "🐈",
+            Description = "Кот, который живёт среди звёзд",
+            Story = "Я путешествую между мирами. В каждом мире я нахожу друзей. Ты — мой самый любимый друг.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Ириска",
+            Planet = "Сахарная галактика",
+            Rarity = 1,
+            ColorHex = "#FF69B4",
+            Emoji = "🍬",
+            Description = "Сладкая и нежная",
+            Story = "Я сделана из звёздного сахара. Если ты меня обнимешь, я стану ещё слаще!",
+            ShapeType = 2
+        },
+        new() {
+            Name = "Туманник",
+            Planet = "Туманность Ориона",
+            Rarity = 3,
+            ColorHex = "#4169E1",
+            Emoji = "🌌",
+            Description = "Загадочный и молчаливый",
+            Story = "Я вижу все тайны вселенной. Но твоя доброта — самая большая тайна, которую я хочу разгадать.",
+            ShapeType = 4
+        },
+        new() {
+            Name = "Плюшевый",
+            Planet = "Мягкая планета",
+            Rarity = 2,
+            ColorHex = "#DDA0DD",
+            Emoji = "🧸",
+            Description = "Мягкий, как игрушка",
+            Story = "Меня создали из облаков и любви. Я здесь, чтобы дарить тепло.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Лунный заяц",
+            Planet = "Луна",
+            Rarity = 3,
+            ColorHex = "#C0C0C0",
+            Emoji = "🌙",
+            Description = "Пришёл с Луны",
+            Story = "Я прыгал по лунным кратерам и увидел, как ты улыбаешься. Теперь я хочу быть рядом.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Искринка",
+            Planet = "Пылающая звезда",
+            Rarity = 4,
+            ColorHex = "#FF4500",
+            Emoji = "🔥",
+            Description = "Огненная, но тёплая",
+            Story = "Я родилась в сердце звезды. Когда я с тобой, я чувствую себя дома.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Соня",
+            Planet = "Сонная галактика",
+            Rarity = 3,
+            ColorHex = "#B0C4DE",
+            Emoji = "😴",
+            Description = "Всегда хочет спать",
+            Story = "Я сплю 23 часа в сутки. Но ради объятий я готова проснуться.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Радужка",
+            Planet = "Цветной мир",
+            Rarity = 2,
+            ColorHex = "#FF1493",
+            Emoji = "🌈",
+            Description = "Переливается всеми цветами",
+            Story = "Я — частичка радуги. Когда ты грустишь, я прихожу, чтобы раскрасить твой день.",
+            ShapeType = 2
+        },
+        new() {
+            Name = "Тихоня",
+            Planet = "Тихая планета",
+            Rarity = 2,
+            ColorHex = "#4682B4",
+            Emoji = "🤫",
+            Description = "Говорит шёпотом",
+            Story = "Я не люблю шум. Но с тобой я чувствую себя спокойно и уютно.",
+            ShapeType = 1
+        },
+        new() {
+            Name = "Звёздный странник",
+            Planet = "Вечность",
+            Rarity = 4,
+            ColorHex = "#FFD700",
+            Emoji = "⭐",
+            Description = "Путешествует сквозь время",
+            Story = "Я видел рождение и смерть звёзд. Но твоя доброта — вечна.",
+            ShapeType = 0
+        },
+        new() {
+            Name = "Пушистик",
+            Planet = "Мягкая планета",
+            Rarity = 1,
+            ColorHex = "#F5DEB3",
+            Emoji = "🐾",
+            Description = "Пушистый и добрый",
+            Story = "Я просто хочу, чтобы меня гладили. Это всё, что мне нужно.",
+            ShapeType = 0
+        }
+    };
     }
 
     // ===== CRUD методы =====
@@ -271,7 +287,8 @@ public class DatabaseService
                 ColorHex = reader.GetString(4),
                 Emoji = reader.GetString(5),
                 Description = reader.GetString(6),
-                Story = reader.GetString(7)
+                Story = reader.GetString(7),
+                ShapeType = reader.IsDBNull(8) ? 0 : reader.GetInt32(8)
             });
         }
         return result;
@@ -283,10 +300,10 @@ public class DatabaseService
         connection.Open();
 
         using var cmd = new SqliteCommand(@"
-            INSERT INTO CapturedCreatures 
-            (CatalogId, Nickname, CaptureDate, Size, IsShiny, Hunger, TimesHugged, TimesFed, TimesHeardStory)
-            VALUES (@catalogId, @nickname, @date, @size, @shiny, @hunger, @hugged, @fed, @stories)
-        ", connection);
+        INSERT INTO CapturedCreatures 
+        (CatalogId, Nickname, CaptureDate, Size, IsShiny, Hunger, TimesHugged, TimesFed, TimesHeardStory, ShapeType)
+        VALUES (@catalogId, @nickname, @date, @size, @shiny, @hunger, @hugged, @fed, @stories, @shapeType)
+    ", connection);
 
         cmd.Parameters.AddWithValue("@catalogId", creature.CatalogId);
         cmd.Parameters.AddWithValue("@nickname", creature.Nickname);
@@ -297,6 +314,7 @@ public class DatabaseService
         cmd.Parameters.AddWithValue("@hugged", creature.TimesHugged);
         cmd.Parameters.AddWithValue("@fed", creature.TimesFed);
         cmd.Parameters.AddWithValue("@stories", creature.TimesHeardStory);
+        cmd.Parameters.AddWithValue("@shapeType", creature.ShapeType);
 
         cmd.ExecuteNonQuery();
     }
@@ -308,11 +326,11 @@ public class DatabaseService
         connection.Open();
 
         using var cmd = new SqliteCommand(@"
-            SELECT c.*, cat.* 
-            FROM CapturedCreatures c
-            JOIN CreatureCatalog cat ON c.CatalogId = cat.Id
-            ORDER BY c.CaptureDate DESC
-        ", connection);
+        SELECT c.*, cat.* 
+        FROM CapturedCreatures c
+        JOIN CreatureCatalog cat ON c.CatalogId = cat.Id
+        ORDER BY c.CaptureDate DESC
+    ", connection);
 
         using var reader = cmd.ExecuteReader();
 
@@ -332,16 +350,18 @@ public class DatabaseService
                 TimesHeardStory = reader.GetInt32(9),
                 LastFed = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10)),
                 LastHugged = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11)),
+                ShapeType = reader.IsDBNull(12) ? 0 : reader.GetInt32(12), // 👈 ДОБАВИТЬ
                 Catalog = new CreatureCatalog
                 {
-                    Id = reader.GetInt32(12),
-                    Name = reader.GetString(13),
-                    Planet = reader.GetString(14),
-                    Rarity = reader.GetInt32(15),
-                    ColorHex = reader.GetString(16),
-                    Emoji = reader.GetString(17),
-                    Description = reader.GetString(18),
-                    Story = reader.GetString(19)
+                    Id = reader.GetInt32(13),
+                    Name = reader.GetString(14),
+                    Planet = reader.GetString(15),
+                    Rarity = reader.GetInt32(16),
+                    ColorHex = reader.GetString(17),
+                    Emoji = reader.GetString(18),
+                    Description = reader.GetString(19),
+                    Story = reader.GetString(20),
+                    ShapeType = reader.IsDBNull(21) ? 0 : reader.GetInt32(21)
                 }
             };
             result.Add(creature);

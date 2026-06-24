@@ -8,6 +8,7 @@ namespace AlienStories.Models;
 
 public class CreatureCatalog
 {
+    public int ShapeType { get; set; }
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Planet { get; set; } = string.Empty;
